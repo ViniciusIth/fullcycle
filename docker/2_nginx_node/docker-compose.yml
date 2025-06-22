@@ -1,0 +1,57 @@
+services:
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    networks:
+        - app
+        - db
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+        DB_HOST: db
+        DB_USER: root
+        DB_PWD: fullcycle
+        DB_DATA: fullcycle
+
+  db:
+    image: docker.io/mysql:9.3.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: fullcycle  
+      MYSQL_DATABASE: fullcycle  
+    volumes:
+      - db_data:/var/lib/mysql  
+      - ./db:/docker-entrypoint-initdb.d
+    networks:
+        - db
+    ports:
+      - "3306:3306" 
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pfullcycle"]
+      interval: 10s
+      timeout: 5s  
+      retries: 5   
+      start_period: 10s
+
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    depends_on:
+      - app
+    networks:
+        - app
+    ports:
+      - "8080:80"
+
+volumes:
+  db_data: {}
+
+networks:
+  app:
+    driver: bridge
+  db:
+    driver: bridge
